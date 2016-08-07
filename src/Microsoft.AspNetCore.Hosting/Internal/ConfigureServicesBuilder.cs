@@ -12,19 +12,6 @@ namespace Microsoft.AspNetCore.Hosting.Internal
     {
         public ConfigureServicesBuilder(MethodInfo configureServices)
         {
-            if (configureServices == null)
-            {
-                throw new ArgumentNullException(nameof(configureServices));
-            }
-
-            // Only support IServiceCollection parameters
-            var parameters = configureServices.GetParameters();
-            if (parameters.Length > 1 ||
-                parameters.Any(p => p.ParameterType != typeof(IServiceCollection)))
-            {
-                throw new InvalidOperationException("The ConfigureServices method must either be parameterless or take only one parameter of type IServiceCollection.");
-            }
-
             MethodInfo = configureServices;
         }
 
@@ -32,22 +19,30 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 
         public Func<IServiceCollection, IServiceProvider> Build(object instance) => services => Invoke(instance, services);
 
-        private IServiceProvider Invoke(object instance, IServiceCollection exportServices)
+        private IServiceProvider Invoke(object instance, IServiceCollection services)
         {
-            if (exportServices == null)
+            if (MethodInfo == null)
             {
-                throw new ArgumentNullException(nameof(exportServices));
+                return null;
             }
 
-            var parameters = new object[MethodInfo.GetParameters().Length];
+            // Only support IServiceCollection parameters
+            var parameters = MethodInfo.GetParameters();
+            if (parameters.Length > 1 ||
+                parameters.Any(p => p.ParameterType != typeof(IServiceCollection)))
+            {
+                throw new InvalidOperationException("The ConfigureServices method must either be parameterless or take only one parameter of type IServiceCollection.");
+            }
+
+            var arguments = new object[MethodInfo.GetParameters().Length];
 
             // Ctor ensures we have at most one IServiceCollection parameter
             if (parameters.Length > 0)
             {
-                parameters[0] = exportServices;
+                arguments[0] = services;
             }
 
-            return MethodInfo.Invoke(instance, parameters) as IServiceProvider ?? exportServices.BuildServiceProvider();
+            return MethodInfo.Invoke(instance, arguments) as IServiceProvider;
         }
     }
 }

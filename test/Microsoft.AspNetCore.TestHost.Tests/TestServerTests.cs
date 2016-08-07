@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.TestHost.Tests.Internal;
 using Microsoft.AspNetCore.Testing.xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DiagnosticAdapter;
@@ -89,6 +90,24 @@ namespace Microsoft.AspNetCore.TestHost
             Assert.Equal("RequestServices:True", result);
         }
 
+        public class MyContainerStartup
+        {
+            public void ConfigureServices(IServiceCollection services)
+            {
+
+            }
+
+            public void ConfigureContainer(MyContainer container)
+            {
+                container.MyFancyContainerMethod();
+            }
+
+            public void Configure(IApplicationBuilder app)
+            {
+
+            }
+        }
+
         public class CustomContainerStartup
         {
             public IServiceProvider Services;
@@ -117,6 +136,21 @@ namespace Microsoft.AspNetCore.TestHost
             var server = new TestServer(builder);
             string result = await server.CreateClient().GetStringAsync("/path");
             Assert.Equal("ApplicationServicesEqual:True", result);
+        }
+
+        [ConditionalFact]
+        [FrameworkSkipCondition(RuntimeFrameworks.Mono, SkipReason = "Hangs randomly (issue #507)")]
+        public void CustomServiceProviderFactorySetsApplicationServices()
+        {
+            var builder = new WebHostBuilder()
+                .UseMyContainer()
+                .UseStartup<MyContainerStartup>();
+            var server = new TestServer(builder);
+
+            var services = server.Host.Services;
+            Assert.IsType(typeof(MyContainer), services);
+
+            Assert.True(((MyContainer)services).FancyMethodCalled);
         }
 
         public class TestService { }

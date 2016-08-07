@@ -201,6 +201,8 @@ namespace Microsoft.AspNetCore.Hosting
             // Conjure up a RequestServices
             services.AddTransient<IStartupFilter, AutoRequestServicesStartupFilter>();
 
+            services.AddTransient<IServiceProviderFactory, DefaultServiceProviderFactory>();
+
             // Ensure object pooling is available everywhere.
             services.AddSingleton<ObjectPoolProvider, DefaultObjectPoolProvider>();
 

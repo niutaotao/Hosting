@@ -11,7 +11,7 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 {
     public class StartupLoader
     {
-        public static StartupMethods LoadMethods(IServiceProvider services, Type startupType, string environmentName)
+        public static StartupMethods LoadMethods(IServiceProvider hostingServiceProvider, Type startupType, string environmentName)
         {
             var configureMethod = FindConfigureDelegate(startupType, environmentName);
             var servicesMethod = FindConfigureServicesDelegate(startupType, environmentName);
@@ -19,10 +19,40 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             object instance = null;
             if (!configureMethod.MethodInfo.IsStatic || (servicesMethod != null && !servicesMethod.MethodInfo.IsStatic))
             {
-                instance = ActivatorUtilities.GetServiceOrCreateInstance(services, startupType);
+                instance = ActivatorUtilities.GetServiceOrCreateInstance(hostingServiceProvider, startupType);
             }
 
-            return new StartupMethods(configureMethod.Build(instance), servicesMethod?.Build(instance));
+            var configureServicesCallback = servicesMethod.Build(instance);
+            var serviceProviderFactory = hostingServiceProvider.GetRequiredService<IServiceProviderFactory>();
+
+            Func<IServiceCollection, IServiceProvider> configureServices = services =>
+            {
+                IServiceProvider applicationServiceProvider = configureServicesCallback.Invoke(services);
+
+                if (applicationServiceProvider == null)
+                {
+                    var builder = serviceProviderFactory.CreateBuilder(services);
+                    // Optimize the default case by not calling into the ConfigureContainer method
+                    // since the default builder *is* the ServiceCollection itself
+                    if (builder != services)
+                    {
+                        var configureContainer = FindConfigureContainerDelegate(startupType, environmentName);
+                        configureContainer.Build(instance).Invoke(builder);
+                    }
+
+                    applicationServiceProvider = serviceProviderFactory.CreateServiceProvider(builder);
+
+                    if (applicationServiceProvider == null)
+                    {
+                        // Add more useful error handling
+                        throw new ArgumentNullException(nameof(applicationServiceProvider));
+                    }
+                }
+
+                return applicationServiceProvider;
+            };
+
+            return new StartupMethods(configureMethod.Build(instance), configureServices);
         }
 
         public static Type FindStartupType(string startupAssemblyName, string environmentName)
@@ -30,8 +60,8 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             if (string.IsNullOrEmpty(startupAssemblyName))
             {
                 throw new ArgumentException(
-                    string.Format("A startup method, startup type or startup assembly is required. If specifying an assembly, '{0}' cannot be null or empty.", 
-                    nameof(startupAssemblyName)), 
+                    string.Format("A startup method, startup type or startup assembly is required. If specifying an assembly, '{0}' cannot be null or empty.",
+                    nameof(startupAssemblyName)),
                     nameof(startupAssemblyName));
             }
 
@@ -83,11 +113,17 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             return new ConfigureBuilder(configureMethod);
         }
 
+        private static ConfigureContainerBuilder FindConfigureContainerDelegate(Type startupType, string environmentName)
+        {
+            var configureMethod = FindMethod(startupType, "Configure{0}Container", environmentName, typeof(void), required: false);
+            return new ConfigureContainerBuilder(configureMethod);
+        }
+
         private static ConfigureServicesBuilder FindConfigureServicesDelegate(Type startupType, string environmentName)
         {
             var servicesMethod = FindMethod(startupType, "Configure{0}Services", environmentName, typeof(IServiceProvider), required: false)
                 ?? FindMethod(startupType, "Configure{0}Services", environmentName, typeof(void), required: false);
-            return servicesMethod == null ? null : new ConfigureServicesBuilder(servicesMethod);
+            return new ConfigureServicesBuilder(servicesMethod);
         }
 
         private static MethodInfo FindMethod(Type startupType, string methodName, string environmentName, Type returnType = null, bool required = true)
