@@ -13,7 +13,7 @@ namespace Microsoft.AspNetCore.TestHost.Tests.Internal
         {
             return host.ConfigureServices(services =>
             {
-                services.AddTransient<IServiceProviderFactory, MyContainerFactory>();
+                services.AddTransient<IServiceProviderFactory<MyContainer>, MyContainerFactory>();
             });
         }
     }

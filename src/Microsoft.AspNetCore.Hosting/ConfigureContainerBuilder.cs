@@ -15,6 +15,17 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 
         public Action<object> Build(object instance) => container => Invoke(instance, container);
 
+        public Type GetContainerType()
+        {
+            var parameters = MethodInfo.GetParameters();
+            if (parameters.Length != 1)
+            {
+                // REVIEW: This might be a breaking change
+                throw new InvalidOperationException($"The {MethodInfo.Name} method must take only one parameter.");
+            }
+            return parameters[0].ParameterType;
+        }
+
         private void Invoke(object instance, object container)
         {
             if (MethodInfo == null)
@@ -22,21 +33,7 @@ namespace Microsoft.AspNetCore.Hosting.Internal
                 return;
             }
 
-            // Only support IServiceCollection parameters
-            var parameters = MethodInfo.GetParameters();
-            if (parameters.Length != 1 ||
-                parameters.Any(p => !p.ParameterType.IsAssignableFrom(container.GetType())))
-            {
-                throw new InvalidOperationException($"The {MethodInfo.Name} method must either be parameterless or take only one parameter of type {container.GetType()}.");
-            }
-
-            var arguments = new object[MethodInfo.GetParameters().Length];
-
-            // Ctor ensures we have at most one IServiceCollection parameter
-            if (parameters.Length > 0)
-            {
-                arguments[0] = container;
-            }
+            var arguments = new object[1] { container };
 
             MethodInfo.Invoke(instance, arguments);
         }

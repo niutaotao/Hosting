@@ -6,16 +6,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.TestHost.Tests.Internal
 {
-    public class MyContainerFactory : ServiceProviderFactory<MyContainer>
+    public class MyContainerFactory : IServiceProviderFactory<MyContainer>
     {
-        public override MyContainer CreateBuilder(IServiceCollection services)
+        public MyContainer CreateBuilder(IServiceCollection services)
         {
             var container = new MyContainer();
             container.Populate(services);
             return container;
         }
 
-        public override IServiceProvider CreateServiceProvider(MyContainer containerBuilder)
+        public IServiceProvider CreateServiceProvider(MyContainer containerBuilder)
         {
             containerBuilder.Build();
             return containerBuilder;

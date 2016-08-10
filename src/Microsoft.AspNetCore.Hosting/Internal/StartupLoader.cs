@@ -15,6 +15,7 @@ namespace Microsoft.AspNetCore.Hosting.Internal
         {
             var configureMethod = FindConfigureDelegate(startupType, environmentName);
             var servicesMethod = FindConfigureServicesDelegate(startupType, environmentName);
+            var configureContainerMethod = FindConfigureContainerDelegate(startupType, environmentName);
 
             object instance = null;
             if (!configureMethod.MethodInfo.IsStatic || (servicesMethod != null && !servicesMethod.MethodInfo.IsStatic))
@@ -23,33 +24,41 @@ namespace Microsoft.AspNetCore.Hosting.Internal
             }
 
             var configureServicesCallback = servicesMethod.Build(instance);
-            var serviceProviderFactory = hostingServiceProvider.GetRequiredService<IServiceProviderFactory>();
+            var configureContainerCallback = configureContainerMethod.Build(instance);
 
             Func<IServiceCollection, IServiceProvider> configureServices = services =>
             {
+                // Call ConfigureServices, if that returned an IServiceProvider, we're done
                 IServiceProvider applicationServiceProvider = configureServicesCallback.Invoke(services);
 
-                if (applicationServiceProvider == null)
+                // If there's a ConfigureContainer method
+                if (applicationServiceProvider != null)
                 {
-                    var builder = serviceProviderFactory.CreateBuilder(services);
-                    // Optimize the default case by not calling into the ConfigureContainer method
-                    // since the default builder *is* the ServiceCollection itself
-                    if (builder != services)
-                    {
-                        var configureContainer = FindConfigureContainerDelegate(startupType, environmentName);
-                        configureContainer.Build(instance).Invoke(builder);
-                    }
-
-                    applicationServiceProvider = serviceProviderFactory.CreateServiceProvider(builder);
-
-                    if (applicationServiceProvider == null)
-                    {
-                        // Add more useful error handling
-                        throw new ArgumentNullException(nameof(applicationServiceProvider));
-                    }
+                    return applicationServiceProvider;
                 }
 
-                return applicationServiceProvider;
+                // If there's no ConfigureContainer method
+                if (configureContainerMethod.MethodInfo != null)
+                {
+                    // We have a ConfigureContainer method, get the IServiceProviderFactory<TContainerBuilder>
+                    var serviceProviderFactoryType = typeof(IServiceProviderFactory<>).MakeGenericType(configureContainerMethod.GetContainerType());
+                    var serviceProviderFactory = hostingServiceProvider.GetRequiredService(serviceProviderFactoryType);
+                    // var builder = serviceProviderFactory.CreateBuilder(services);
+                    var builder = serviceProviderFactoryType.GetMethod("CreateBuilder").Invoke(serviceProviderFactory, new object[] { services });
+                    configureContainerCallback.Invoke(builder);
+                    // applicationServiceProvider = serviceProviderFactory.CreateServiceProvider(builder);
+                    applicationServiceProvider = (IServiceProvider)serviceProviderFactoryType.GetMethod("CreateServiceProvider").Invoke(serviceProviderFactory, new object[] { builder });
+                }
+                else
+                {
+                    // Get the default factory
+                    var serviceProviderFactory = hostingServiceProvider.GetRequiredService<IServiceProviderFactory<IServiceCollection>>();
+
+                    // Don't bother calling CreateBuilder since it just returns the default service collection
+                    applicationServiceProvider = serviceProviderFactory.CreateServiceProvider(services);
+                }
+
+                return applicationServiceProvider ?? services.BuildServiceProvider();
             };
 
             return new StartupMethods(configureMethod.Build(instance), configureServices);
