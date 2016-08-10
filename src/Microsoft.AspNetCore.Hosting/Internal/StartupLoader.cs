@@ -37,7 +37,7 @@ namespace Microsoft.AspNetCore.Hosting.Internal
                     return applicationServiceProvider;
                 }
 
-                // If there's no ConfigureContainer method
+                // If there's a ConfigureContainer method
                 if (configureContainerMethod.MethodInfo != null)
                 {
                     // We have a ConfigureContainer method, get the IServiceProviderFactory<TContainerBuilder>
