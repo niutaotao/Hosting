@@ -44,10 +44,10 @@ namespace Microsoft.AspNetCore.Hosting.Internal
                     var serviceProviderFactoryType = typeof(IServiceProviderFactory<>).MakeGenericType(configureContainerMethod.GetContainerType());
                     var serviceProviderFactory = hostingServiceProvider.GetRequiredService(serviceProviderFactoryType);
                     // var builder = serviceProviderFactory.CreateBuilder(services);
-                    var builder = serviceProviderFactoryType.GetMethod("CreateBuilder").Invoke(serviceProviderFactory, new object[] { services });
+                    var builder = serviceProviderFactoryType.GetMethod(nameof(DefaultServiceProviderFactory.CreateBuilder)).Invoke(serviceProviderFactory, new object[] { services });
                     configureContainerCallback.Invoke(builder);
                     // applicationServiceProvider = serviceProviderFactory.CreateServiceProvider(builder);
-                    applicationServiceProvider = (IServiceProvider)serviceProviderFactoryType.GetMethod("CreateServiceProvider").Invoke(serviceProviderFactory, new object[] { builder });
+                    applicationServiceProvider = (IServiceProvider)serviceProviderFactoryType.GetMethod(nameof(DefaultServiceProviderFactory.CreateServiceProvider)).Invoke(serviceProviderFactory, new object[] { builder });
                 }
                 else
                 {

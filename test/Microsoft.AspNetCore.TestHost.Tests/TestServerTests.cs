@@ -108,6 +108,53 @@ namespace Microsoft.AspNetCore.TestHost
             }
         }
 
+        public class MyContainerWithoutRegisteredContainer
+        {
+            public void ConfigureServices(IServiceCollection services)
+            {
+
+            }
+
+            public void ConfigureContainer(MyContainer container)
+            {
+                container.MyFancyContainerMethod();
+            }
+
+            public void Configure(IApplicationBuilder app)
+            {
+
+            }
+        }
+
+        public class MyContainerStartupBaseClassWithoutRegisteredContainer : StartupBase<MyContainer>
+        {
+            public MyContainerStartupBaseClassWithoutRegisteredContainer(IServiceProviderFactory<MyContainer> factory) : base(factory)
+            {
+            }
+
+            public override void Configure(IApplicationBuilder app)
+            {
+
+            }
+        }
+
+        public class MyContainerStartupBaseClass : StartupBase<MyContainer>
+        {
+            public MyContainerStartupBaseClass(IServiceProviderFactory<MyContainer> factory) : base(factory)
+            {
+            }
+
+            public override void Configure(IApplicationBuilder app)
+            {
+
+            }
+
+            public override void ConfigureContainer(MyContainer containerBuilder)
+            {
+                containerBuilder.MyFancyContainerMethod();
+            }
+        }
+
         public class CustomContainerStartup
         {
             public IServiceProvider Services;
@@ -138,9 +185,8 @@ namespace Microsoft.AspNetCore.TestHost
             Assert.Equal("ApplicationServicesEqual:True", result);
         }
 
-        [ConditionalFact]
-        [FrameworkSkipCondition(RuntimeFrameworks.Mono, SkipReason = "Hangs randomly (issue #507)")]
-        public void CustomServiceProviderFactorySetsApplicationServices()
+        [Fact]
+        public void CustomServiceProviderFactoryCallsConfigureContainer()
         {
             var builder = new WebHostBuilder()
                 .UseMyContainer()
@@ -151,6 +197,38 @@ namespace Microsoft.AspNetCore.TestHost
             Assert.IsType(typeof(MyContainer), services);
 
             Assert.True(((MyContainer)services).FancyMethodCalled);
+        }
+
+        [Fact]
+        public void CustomServiceProviderFactoryStartupBaseClassCallsConfigureContainer()
+        {
+            var builder = new WebHostBuilder()
+                .UseMyContainer()
+                .UseStartup<MyContainerStartupBaseClass>();
+            var server = new TestServer(builder);
+
+            var services = server.Host.Services;
+            Assert.IsType(typeof(MyContainer), services);
+
+            Assert.True(((MyContainer)services).FancyMethodCalled);
+        }
+
+        [Fact]
+        public void CustomServiceProviderFactoryThrowsIfNotRegisterWithConfigureContainerMethod()
+        {
+            var builder = new WebHostBuilder()
+                .UseStartup<MyContainerWithoutRegisteredContainer>();
+
+            Assert.Throws<InvalidOperationException>(() => new TestServer(builder));
+        }
+
+        [Fact]
+        public void CustomServiceProviderFactoryThrowsIfNotRegisterWithConfigureContainerMethodStartupBase()
+        {
+            var builder = new WebHostBuilder()
+                .UseStartup<MyContainerStartupBaseClassWithoutRegisteredContainer>();
+
+            Assert.Throws<InvalidOperationException>(() => new TestServer(builder));
         }
 
         public class TestService { }

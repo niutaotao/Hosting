@@ -11,18 +11,7 @@ namespace Microsoft.AspNetCore.Hosting
     {
         public abstract void Configure(IApplicationBuilder app);
 
-        // REVIEW: This is a breaking change
-        public virtual void ConfigureServices(IServiceCollection services)
-        {
-        }
-
-        IServiceProvider IStartup.ConfigureServices(IServiceCollection services)
-        {
-            ConfigureServices(services);
-            return CreateServiceProvider(services);
-        }
-
-        protected virtual IServiceProvider CreateServiceProvider(IServiceCollection services)
+        public virtual IServiceProvider ConfigureServices(IServiceCollection services)
         {
             return services.BuildServiceProvider();
         }

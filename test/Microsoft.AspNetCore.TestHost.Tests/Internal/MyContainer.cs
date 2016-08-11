@@ -11,7 +11,7 @@ namespace Microsoft.AspNetCore.TestHost.Tests.Internal
         private IServiceProvider _inner;
         private IServiceCollection _services;
 
-        public bool FancyMethodCalled { get; set; }
+        public bool FancyMethodCalled { get; private set; }
 
         public object GetService(Type serviceType)
         {
