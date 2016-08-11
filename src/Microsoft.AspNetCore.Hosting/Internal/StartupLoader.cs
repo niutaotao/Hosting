@@ -31,7 +31,6 @@ namespace Microsoft.AspNetCore.Hosting.Internal
                 // Call ConfigureServices, if that returned an IServiceProvider, we're done
                 IServiceProvider applicationServiceProvider = configureServicesCallback.Invoke(services);
 
-                // If there's a ConfigureContainer method
                 if (applicationServiceProvider != null)
                 {
                     return applicationServiceProvider;
