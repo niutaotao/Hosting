@@ -22,6 +22,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupClassMayHaveHostingServicesInjected()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             serviceCollection.AddSingleton<IFakeStartupCallback>(this);
             var services = serviceCollection.BuildServiceProvider();
 
@@ -46,8 +47,9 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         [InlineData("BaseClass")]
         public void StartupClassAddsConfigureServicesToApplicationServices(string environment)
         {
-            var services = new ServiceCollection().BuildServiceProvider();
-
+            var services = new ServiceCollection()
+                .AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>()
+                .BuildServiceProvider();
             var type = StartupLoader.FindStartupType("Microsoft.AspNetCore.Hosting.Tests", environment);
             var startup = StartupLoader.LoadMethods(services, type, environment);
 
@@ -65,6 +67,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupWithNoConfigureThrows()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             serviceCollection.AddSingleton<IFakeStartupCallback>(this);
             var services = serviceCollection.BuildServiceProvider();
             var type = StartupLoader.FindStartupType("Microsoft.AspNetCore.Hosting.Tests", "Boom");
@@ -76,6 +79,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupWithTwoConfiguresThrows()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             serviceCollection.AddSingleton<IFakeStartupCallback>(this);
             var services = serviceCollection.BuildServiceProvider();
 
@@ -89,6 +93,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupWithPrivateConfiguresThrows()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             serviceCollection.AddSingleton<IFakeStartupCallback>(this);
             var services = serviceCollection.BuildServiceProvider();
 
@@ -103,6 +108,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupWithTwoConfigureServicesThrows()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             serviceCollection.AddSingleton<IFakeStartupCallback>(this);
             var services = serviceCollection.BuildServiceProvider();
 
@@ -116,6 +122,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupClassCanHandleConfigureServicesThatReturnsNull()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             var services = serviceCollection.BuildServiceProvider();
 
             var type = StartupLoader.FindStartupType("Microsoft.AspNetCore.Hosting.Tests", "WithNullConfigureServices");
@@ -132,6 +139,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupClassWithConfigureServicesShouldMakeServiceAvailableInConfigure()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             var services = serviceCollection.BuildServiceProvider();
 
             var type = StartupLoader.FindStartupType("Microsoft.AspNetCore.Hosting.Tests", "WithConfigureServices");
@@ -149,6 +157,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupLoaderCanLoadByType()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             var services = serviceCollection.BuildServiceProvider();
 
             var hostingEnv = new HostingEnvironment();
@@ -166,6 +175,7 @@ namespace Microsoft.AspNetCore.Hosting.Tests
         public void StartupLoaderCanLoadByTypeWithEnvironment()
         {
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddSingleton<IServiceProviderFactory<IServiceCollection>, DefaultServiceProviderFactory>();
             var services = serviceCollection.BuildServiceProvider();
 
             var startup = StartupLoader.LoadMethods(services, typeof(TestStartup), "No");
