@@ -36,7 +36,6 @@ namespace Microsoft.AspNetCore.Hosting.Internal
 
             var arguments = new object[MethodInfo.GetParameters().Length];
 
-            // Ctor ensures we have at most one IServiceCollection parameter
             if (parameters.Length > 0)
             {
                 arguments[0] = services;
